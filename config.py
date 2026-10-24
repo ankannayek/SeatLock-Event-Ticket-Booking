@@ -39,12 +39,21 @@ def _hold_seconds():
     return _int("SEATLOCK_HOLD_MINUTES", 10) * 60
 
 
+def _db_url():
+    url = os.environ.get("DATABASE_URL", "sqlite:///seatlock.db")
+    # Force the psycopg (v3) driver for Postgres URLs.
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
 class Config:
     SECRET_KEY = os.environ.get("SEATLOCK_SECRET_KEY", "dev-secret-change-me")
     JWT_SECRET = os.environ.get("SEATLOCK_JWT_SECRET", SECRET_KEY)
     JWT_EXPIRY_HOURS = _int("SEATLOCK_JWT_EXPIRY_HOURS", 24)
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///seatlock.db")
+    SQLALCHEMY_DATABASE_URI = _db_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Seat holds
