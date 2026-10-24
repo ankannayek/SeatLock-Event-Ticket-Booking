@@ -83,8 +83,7 @@ def create_app(config_class=Config, config_overrides=None):
     return app
 
 
-if __name__ == "__main__":
-    application = create_app()
+def _init_db(application):
     with application.app_context():
         db.create_all()
         ensure_schema()
@@ -92,6 +91,16 @@ if __name__ == "__main__":
         if User.query.count() == 0:
             from seed import seed_data
             print(seed_data(application))
+
+
+# WSGI entry point for gunicorn (`gunicorn app:app`).
+app = create_app()
+if os.environ.get("SEATLOCK_AUTO_INIT", "1") == "1":
+    _init_db(app)
+
+
+if __name__ == "__main__":
+    application = app
     application.run(host=application.config["HOST"],
                     port=application.config["PORT"],
                     debug=application.config["DEBUG"])
