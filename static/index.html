@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SeatLock — Event Ticket Booking</title>
+<style>
+  :root { --bg:#0f172a; --card:#ffffff; --muted:#64748b; --text:#0f172a; --accent:#4f46e5; --accent2:#06b6d4; --green:#16a34a; --amber:#d97706; --red:#dc2626; --border:#e2e8f0; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:#f1f5f9; color:var(--text); }
+  header { background:var(--bg); color:#fff; padding:18px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  header h1 { margin:0; font-size:22px; letter-spacing:.2px; }
+  header h1 span { color:#818cf8; }
+  header p { margin:2px 0 0; color:#cbd5e1; font-size:13px; }
+  .wrap { max-width:1080px; margin:0 auto; padding:20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:16px; box-shadow:0 1px 3px rgba(15,23,42,.06); }
+  h2 { margin:0 0 12px; font-size:18px; }
+  h3 { margin:16px 0 8px; font-size:15px; }
+  label { display:block; font-size:13px; color:var(--muted); margin:8px 0 4px; }
+  input, select { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:9px; font-size:14px; }
+  button { border:0; border-radius:9px; padding:10px 16px; font-size:14px; cursor:pointer; background:var(--accent); color:#fff; font-weight:600; }
+  button.secondary { background:#e2e8f0; color:#0f172a; }
+  button.danger { background:var(--red); }
+  button:disabled { opacity:.55; cursor:not-allowed; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
+  .row > * { flex:1 1 180px; }
+  .row button { flex:0 0 auto; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+  .event { border:1px solid var(--border); border-radius:12px; padding:14px; cursor:pointer; }
+  .event.active { border-color:var(--accent); box-shadow:0 0 0 2px #c7d2fe; }
+  .event strong { display:block; font-size:16px; }
+  .event small { color:var(--muted); }
+  .shows { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .shows button.active { background:var(--accent2); }
+  .legend { display:flex; gap:16px; flex-wrap:wrap; font-size:13px; color:var(--muted); margin:10px 0; }
+  .dot { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:middle; margin-right:5px; }
+  .seatmap { display:grid; gap:6px; }
+  .seatrow { display:grid; grid-template-columns:28px repeat(10, 1fr); gap:6px; align-items:center; }
+  .seat { aspect-ratio:1; border-radius:7px; border:1px solid #cbd5e1; background:#fff; padding:0; font-size:11px; color:#334155; }
+  .seat.available:hover { border-color:var(--accent); }
+  .seat.selected { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:700; }
+  .seat.held { background:#fef3c7; border-color:#f59e0b; color:#92400e; }
+  .seat.booked { background:#e2e8f0; color:#94a3b8; }
+  .summary { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); }
+  .booking { border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:10px; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  #msg { min-height:22px; font-size:14px; color:#334155; }
+  #msg.error { color:var(--red); }
+  #msg.ok { color:var(--green); }
+  .muted { color:var(--muted); font-size:13px; }
+  @media (max-width:600px){ .seatrow { grid-template-columns:20px repeat(10, 1fr); } .seat { font-size:9px; } }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Seat<span>Lock</span></h1><p>Event ticket booking — backend demo frontend</p></div>
+  <div id="userBox" class="muted" style="color:#e2e8f0">Not logged in</div>
+</header>
+
+<div class="wrap">
+  <div id="msg"></div>
+
+  <section class="card">
+    <h2>Account</h2>
+    <div class="row">
+      <div><label>Name (for register)</label><input id="name" placeholder="Demo User"></div>
+      <div><label>Email</label><input id="email" value="demo@seatlock.local"></div>
+      <div><label>Password</label><input id="password" type="password" value="Demo123!"></div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="loginBtn">Log in</button>
+      <button class="secondary" id="registerBtn">Register</button>
+      <button class="secondary" id="demoBtn">Use demo account</button>
+      <button class="secondary" id="adminBtn">Use admin account</button>
+      <button class="secondary" id="logoutBtn">Log out</button>
+    </div>
+    <p class="muted">Demo: demo@seatlock.local / Demo123! &nbsp;|&nbsp; Admin: admin@seatlock.local / Admin123!</p>
+  </section>
+
+  <section class="card">
+    <h2>Events</h2>
+    <div id="events" class="grid"><p class="muted">Loading events…</p></div>
+    <div id="shows" class="shows"></div>
+  </section>
+
+  <section class="card" id="bookingCard" style="display:none">
+    <h2 id="showTitle">Pick a show</h2>
+    <p id="showMeta" class="muted"></p>
+    <div class="legend">
+      <span><span class="dot" style="background:#fff;border:1px solid #cbd5e1"></span>Available</span>
+      <span><span class="dot" style="background:#4f46e5"></span>Selected</span>
+      <span><span class="dot" style="background:#fef3c7;border:1px solid #f59e0b"></span>Held</span>
+      <span><span class="dot" style="background:#e2e8f0"></span>Booked</span>
+    </div>
+    <div id="seatmap" class="seatmap"></div>
+    <div class="summary">
+      <div><strong id="selectedSummary">No seats selected</strong><div id="holdInfo" class="muted"></div></div>
+      <div class="row" style="flex:0 0 auto">
+        <button id="holdBtn" disabled>Hold seats (10 min)</button>
+        <button id="bookBtn" disabled>Book selected</button>
+        <button class="secondary" id="waitlistBtn">Join waitlist</button>
+        <button class="secondary" id="refreshBtn">Refresh seats</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>My bookings</h2>
+    <button class="secondary" id="loadBookingsBtn">Load my bookings</button>
+    <div id="bookings" style="margin-top:12px"></div>
+  </section>
+
+  <p class="muted">Payments in SeatLock are mocked — no real money moves. API base: <code>/api</code> on this same server.</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const msgEl = $('msg');
+let token = localStorage.getItem('seatlock_token') || '';
+let user = null;
+let events = [];
+let selectedEvent = null, selectedShow = null, seats = [], selected = new Set();
+
+function showMsg(text, ok=false) { msgEl.textContent = text; msgEl.className = ok ? 'ok' : ''; }
+function showErr(text) { msgEl.textContent = text; msgEl.className = 'error'; }
+function headers(auth=true) {
+  const h = {'Content-Type':'application/json'};
+  if (auth && token) h['Authorization'] = 'Bearer ' + token;
+  return h;
+}
+async function api(path, method='GET', body=null, auth=true) {
+  const res = await fetch('/api' + path, {method, headers: headers(auth), body: body ? JSON.stringify(body) : null});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || ('Request failed: ' + res.status));
+  return data;
+}
+function updateUserBox() {
+  $('userBox').textContent = user ? ('Logged in as ' + user.name + ' (' + user.email + ')') : 'Not logged in';
+}
+async function refreshMe() {
+  if (!token) { user = null; updateUserBox(); return; }
+  try { const d = await api('/auth/me'); user = d.user; } catch { user = null; token=''; localStorage.removeItem('seatlock_token'); }
+  updateUserBox();
+}
+async function loadEvents() {
+  try {
+    const d = await api('/events', 'GET', null, false);
+    events = d.events || [];
+    const el = $('events'); el.innerHTML = '';
+    if (!events.length) { el.innerHTML = '<p class="muted">No events found. Seed the database first.</p>'; return; }
+    events.forEach(ev => {
+      const div = document.createElement('div');
+      div.className = 'event' + (selectedEvent && selectedEvent.id===ev.id ? ' active' : '');
+      div.innerHTML = '<strong>' + ev.title + '</strong><small>' + (ev.venue||'') + '</small><br><small>' + (ev.description||'') + '</small>';
+      div.onclick = () => selectEvent(ev);
+      el.appendChild(div);
+    });
+    if (!selectedEvent) selectEvent(events[0]);
+  } catch(e) { $('events').innerHTML = '<p class="muted">Could not load events: ' + e.message + '</p>'; }
+}
+function selectEvent(ev) {
+  selectedEvent = ev;
+  document.querySelectorAll('.event').forEach((n,i) => n.classList.toggle('active', events[i].id===ev.id));
+  const sEl = $('shows'); sEl.innerHTML = '';
+  (ev.shows||[]).forEach(sh => {
+    const b = document.createElement('button');
+    b.className = 'secondary' + (selectedShow && selectedShow.id===sh.id ? ' active' : '');
+    b.textContent = new Date(sh.start_time).toLocaleString();
+    b.onclick = () => selectShow(sh);
+    sEl.appendChild(b);
+  });
+  if (ev.shows && ev.shows.length) selectShow(ev.shows[0]);
+}
+async function selectShow(sh) {
+  selectedShow = sh; selected = new Set(); updateSelected();
+  document.querySelectorAll('#shows button').forEach(b => b.classList.toggle('active', b.textContent === new Date(sh.start_time).toLocaleString()));
+  $('bookingCard').style.display = 'block';
+  $('showTitle').textContent = (selectedEvent ? selectedEvent.title + ' — ' : '') + new Date(sh.start_time).toLocaleString();
+  await loadSeats();
+}
+async function loadSeats() {
+  if (!selectedShow) return;
+  try {
+    const d = await api('/shows/' + selectedShow.id + '/seats', 'GET', null, false);
+    seats = d.seats || [];
+    const rows = {};
+    seats.forEach(s => { (rows[s.row] = rows[s.row] || []).push(s); });
+    const map = $('seatmap'); map.innerHTML = '';
+    Object.keys(rows).sort().forEach(rowLabel => {
+      const rowDiv = document.createElement('div'); rowDiv.className = 'seatrow';
+      const lab = document.createElement('strong'); lab.textContent = rowLabel; rowDiv.appendChild(lab);
+      rows[rowLabel].sort((a,b) => a.seat_number - b.seat_number).forEach(s => {
+        const b = document.createElement('button');
+        b.className = 'seat ' + s.status + (selected.has(s.id) ? ' selected' : '');
+        b.textContent = s.label;
+        b.title = s.category + ' — ₹' + s.price + ' — ' + s.status;
+        b.disabled = s.status !== 'available' && !selected.has(s.id);
+        b.onclick = () => {
+          if (selected.has(s.id)) selected.delete(s.id); else selected.add(s.id);
+          loadSeatsKeepSelection();
+        };
+        rowDiv.appendChild(b);
+      });
+      map.appendChild(rowDiv);
+    });
+    $('showMeta').textContent = seats.length + ' seats • ' + seats.filter(s=>s.status==='available').length + ' available • ' + seats.filter(s=>s.status==='held').length + ' held • ' + seats.filter(s=>s.status==='booked').length + ' booked';
+    updateSelected();
+  } catch(e) { showErr(e.message); }
+}
+// Re-render without losing selection (seats reload may mark held seats differently)
+async function loadSeatsKeepSelection() {
+  const keep = new Set(selected);
+  await loadSeats();
+  selected = new Set([...keep].filter(id => seats.find(s => s.id===id && s.status==='available')));
+  updateSelected();
+  // re-apply selected styling cheaply
+  document.querySelectorAll('.seat').forEach(btn => {
+    const seat = seats.find(s => s.label === btn.textContent);
+    if (seat && selected.has(seat.id)) btn.classList.add('selected');
+  });
+}
+function updateSelected() {
+  const chosen = seats.filter(s => selected.has(s.id));
+  const total = chosen.reduce((sum,s) => sum + s.price, 0);
+  $('selectedSummary').textContent = chosen.length ? (chosen.map(s=>s.label).join(', ') + ' — ₹' + total) : 'No seats selected';
+  $('holdBtn').disabled = !chosen.length || !token;
+  $('bookBtn').disabled = !chosen.length || !token;
+  if (chosen.length && !token) $('holdInfo').textContent = 'Log in first to hold or book seats.';
+  else $('holdInfo').textContent = '';
+}
+$('loginBtn').onclick = async () => {
+  try {
+    const d = await api('/auth/login', 'POST', {email: $('email').value.trim(), password: $('password').value}, false);
+    token = d.token; user = d.user; localStorage.setItem('seatlock_token', token); updateUserBox(); showMsg('Logged in as ' + user.name, true); updateSelected();
+  } catch(e) { showErr(e.message); }
+};
+$('registerBtn').onclick = async () => {
+  try {
+    const d = await api('/auth/register', 'POST', {name: $('name').value.trim(), email: $('email').value.trim(), password: $('password').value}, false);
+    token = d.token; user = d.user; localStorage.setItem('seatlock_token', token); updateUserBox(); showMsg('Account created and logged in.', true); updateSelected();
+  } catch(e) { showErr(e.message); }
+};
+$('demoBtn').onclick = () => { $('name').value='Demo User'; $('email').value='demo@seatlock.local'; $('password').value='Demo123!'; $('loginBtn').click(); };
+$('adminBtn').onclick = () => { $('name').value='Admin'; $('email').value='admin@seatlock.local'; $('password').value='Admin123!'; $('loginBtn').click(); };
+$('logoutBtn').onclick = () => { token=''; user=null; localStorage.removeItem('seatlock_token'); updateUserBox(); showMsg('Logged out.'); updateSelected(); };
+$('holdBtn').onclick = async () => {
+  if (!selectedShow) return;
+  try {
+    const d = await api('/shows/' + selectedShow.id + '/holds', 'POST', {seat_ids: [...selected]});
+    showMsg('Seats held for 10 minutes. Now click Book selected to confirm.', true);
+    $('holdInfo').textContent = 'Held — expires in about 10 minutes.';
+    await loadSeats();
+  } catch(e) { showErr(e.message); }
+};
+$('bookBtn').onclick = async () => {
+  if (!selectedShow) return;
+  try {
+    const key = 'web-' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
+    const d = await api('/shows/' + selectedShow.id + '/bookings', 'POST', {seat_ids: [...selected], idempotency_key: key});
+    showMsg('Booked! Booking #' + d.booking.id + ' — ₹' + d.booking.total, true);
+    selected = new Set(); await loadSeats(); loadBookings();
+  } catch(e) { showErr(e.message); }
+};
+$('waitlistBtn').onclick = async () => {
+  if (!selectedShow) return;
+  if (!token) { showErr('Log in first to join the waitlist.'); return; }
+  try { await api('/shows/' + selectedShow.id + '/waitlist', 'POST', {seats_requested: Math.max(1, selected.size)}); showMsg('Added to waitlist.', true); } catch(e) { showErr(e.message); }
+};
+$('refreshBtn').onclick = loadSeats;
+$('loadBookingsBtn').onclick = loadBookings;
+async function loadBookings() {
+  if (!token) { $('bookings').innerHTML = '<p class="muted">Log in first to see bookings.</p>'; return; }
+  try {
+    const d = await api('/bookings/me');
+    const el = $('bookings'); el.innerHTML = '';
+    if (!d.bookings.length) { el.innerHTML = '<p class="muted">No bookings yet.</p>'; return; }
+    d.bookings.forEach(b => {
+      const div = document.createElement('div'); div.className = 'booking';
+      div.innerHTML = '<div><strong>Booking #' + b.id + '</strong> — ' + b.status + ' — ₹' + b.total + '<br><small>' + b.seats.map(s=>s.label).join(', ') + ' • Payment: ' + (b.payment ? b.payment.status : '—') + '</small></div>';
+      if (b.status === 'confirmed') {
+        const c = document.createElement('button'); c.className='danger'; c.textContent='Cancel';
+        c.onclick = async () => { try { await api('/bookings/' + b.id + '/cancel', 'POST', {}); showMsg('Booking cancelled.', true); loadBookings(); loadSeats(); } catch(e) { showErr(e.message); } };
+        div.appendChild(c);
+      }
+      el.appendChild(div);
+    });
+  } catch(e) { showErr(e.message); }
+}
+refreshMe().then(loadEvents);
+</script>
+</body>
+</html>

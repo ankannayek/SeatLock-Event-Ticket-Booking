@@ -1,0 +1,201 @@
+{
+ "info": {
+  "description": "SeatLock event ticket booking backend. Set base_url to http://127.0.0.1:5000 and token after login.",
+  "name": "SeatLock API",
+  "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+ },
+ "item": [
+  {
+   "name": "Health",
+   "request": {
+    "method": "GET",
+    "url": "{{base_url}}/api/health"
+   }
+  },
+  {
+   "name": "Register",
+   "request": {
+    "body": {
+     "mode": "raw",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     },
+     "raw": "{\"name\":\"Demo User\",\"email\":\"new@example.com\",\"password\":\"secret123\"}"
+    },
+    "method": "POST",
+    "url": "{{base_url}}/api/auth/register"
+   }
+  },
+  {
+   "name": "Login (demo)",
+   "request": {
+    "body": {
+     "mode": "raw",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     },
+     "raw": "{\"email\":\"demo@seatlock.local\",\"password\":\"Demo123!\"}"
+    },
+    "method": "POST",
+    "url": "{{base_url}}/api/auth/login"
+   }
+  },
+  {
+   "name": "List events",
+   "request": {
+    "method": "GET",
+    "url": "{{base_url}}/api/events"
+   }
+  },
+  {
+   "name": "List seats for show 1",
+   "request": {
+    "method": "GET",
+    "url": "{{base_url}}/api/shows/1/seats?status=available"
+   }
+  },
+  {
+   "name": "Hold seats",
+   "request": {
+    "body": {
+     "mode": "raw",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     },
+     "raw": "{\"seat_ids\":[1,2]}"
+    },
+    "header": [
+     {
+      "key": "Authorization",
+      "value": "Bearer {{token}}"
+     }
+    ],
+    "method": "POST",
+    "url": "{{base_url}}/api/shows/1/holds"
+   }
+  },
+  {
+   "name": "Confirm booking (idempotent)",
+   "request": {
+    "body": {
+     "mode": "raw",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     },
+     "raw": "{\"seat_ids\":[1,2]}"
+    },
+    "header": [
+     {
+      "key": "Authorization",
+      "value": "Bearer {{token}}"
+     },
+     {
+      "key": "Idempotency-Key",
+      "value": "pay-demo-1"
+     }
+    ],
+    "method": "POST",
+    "url": "{{base_url}}/api/shows/1/bookings"
+   }
+  },
+  {
+   "name": "My bookings",
+   "request": {
+    "header": [
+     {
+      "key": "Authorization",
+      "value": "Bearer {{token}}"
+     }
+    ],
+    "method": "GET",
+    "url": "{{base_url}}/api/bookings/me"
+   }
+  },
+  {
+   "name": "Cancel booking",
+   "request": {
+    "header": [
+     {
+      "key": "Authorization",
+      "value": "Bearer {{token}}"
+     }
+    ],
+    "method": "POST",
+    "url": "{{base_url}}/api/bookings/1/cancel"
+   }
+  },
+  {
+   "name": "Join waitlist",
+   "request": {
+    "body": {
+     "mode": "raw",
+     "options": {
+      "raw": {
+       "language": "json"
+      }
+     },
+     "raw": "{\"seats_requested\":2}"
+    },
+    "header": [
+     {
+      "key": "Authorization",
+      "value": "Bearer {{token}}"
+     }
+    ],
+    "method": "POST",
+    "url": "{{base_url}}/api/shows/1/waitlist"
+   }
+  },
+  {
+   "name": "Public config",
+   "request": {
+    "method": "GET",
+    "url": "{{base_url}}/api/config"
+   }
+  },
+  {
+   "name": "My active holds",
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "Authorization",
+      "value": "Bearer {{token}}"
+     }
+    ],
+    "url": "{{base_url}}/api/holds/me?show_id=1"
+   }
+  },
+  {
+   "name": "Release my holds",
+   "request": {
+    "method": "DELETE",
+    "header": [
+     {
+      "key": "Authorization",
+      "value": "Bearer {{token}}"
+     }
+    ],
+    "url": "{{base_url}}/api/shows/1/holds"
+   }
+  }
+ ],
+ "variable": [
+  {
+   "key": "base_url",
+   "value": "http://127.0.0.1:5000"
+  },
+  {
+   "key": "token",
+   "value": ""
+  }
+ ]
+}
